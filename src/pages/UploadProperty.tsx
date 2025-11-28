@@ -22,11 +22,15 @@ import { useToast } from "@/hooks/use-toast";
 // Fix for default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
+// Marker component
 const LocationMarker = ({
   position,
   setPosition,
@@ -41,8 +45,8 @@ const LocationMarker = ({
   });
 
   return position ? (
-    <Marker 
-      position={position} 
+    <Marker
+      position={position}
       draggable={true}
       eventHandlers={{
         dragend: (e: any) => {
@@ -50,17 +54,34 @@ const LocationMarker = ({
           const pos = marker.getLatLng();
           setPosition([pos.lat, pos.lng]);
         },
-      }} 
+      }}
     />
   ) : null;
 };
 
 const UploadProperty = () => {
   const { toast } = useToast();
-  const [mapPosition, setMapPosition] = useState<[number, number]>([34.0522, -118.2437]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
+  // Form state
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [price, setPrice] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [address, setAddress] = useState("");
+  const [bedrooms, setBedrooms] = useState("");
+  const [bathrooms, setBathrooms] = useState("");
+
+  const [mapPosition, setMapPosition] = useState<[number, number]>([
+    34.0522, -118.2437,
+  ]);
+
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+
+  // Handle location request
   const handleLocationRequest = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -86,16 +107,19 @@ const UploadProperty = () => {
     }
   };
 
+  // Handle image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const newPreviews = Array.from(files).map((file) =>
-        URL.createObjectURL(file)
-      );
-      setImagePreviews((prev) => [...prev, ...newPreviews]);
+      setImageFiles((prev) => [...prev, ...Array.from(files)]);
+      setImagePreviews((prev) => [
+        ...prev,
+        ...Array.from(files).map((f) => URL.createObjectURL(f)),
+      ]);
     }
   };
 
+  // Handle video upload
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -107,20 +131,58 @@ const UploadProperty = () => {
         });
         return;
       }
+      setVideoFile(file);
       setVideoPreview(URL.createObjectURL(file));
     }
   };
 
   const removeImage = (index: number) => {
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Property submitted!",
-      description: "Your listing will be reviewed and published shortly.",
-    });
+
+    const form = new FormData();
+    form.append("title", title);
+    form.append("description", description);
+    form.append("category", category);
+    form.append("price", price);
+    form.append("phone", phoneNumber);
+    form.append("address", address);
+    form.append(
+      "attrs",
+      JSON.stringify({
+        bedrooms,
+        bathrooms,
+      })
+    );
+    form.append("lat", mapPosition[0].toString());
+    form.append("lng", mapPosition[1].toString());
+
+    imageFiles.forEach((file) => form.append("images", file));
+    if (videoFile) form.append("video", videoFile);
+
+    try {
+      const res = await fetch("http://localhost:4000/api/listings", {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      toast({
+        title: "Success!",
+        description: "Your listing has been uploaded.",
+      });
+      console.log("Listing created:", data);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Upload failed.",
+        variant: "destructive",
+      });
+      console.error(err);
+    }
   };
 
   return (
@@ -140,30 +202,35 @@ const UploadProperty = () => {
             {/* Basic Details */}
             <div className="bg-card rounded-xl shadow-soft p-6 space-y-4">
               <h2 className="text-2xl font-bold">Basic Details</h2>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <Label htmlFor="title">Title *</Label>
                   <Input
                     id="title"
                     placeholder="e.g., Modern Family Home with Garden"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
                     required
                   />
                 </div>
-
                 <div className="md:col-span-2">
                   <Label htmlFor="description">Description *</Label>
                   <Textarea
                     id="description"
                     placeholder="Describe your property in detail..."
                     rows={5}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                     required
                   />
                 </div>
-
                 <div>
                   <Label htmlFor="category">Category *</Label>
-                  <Select required>
+                  <Select
+                    value={category}
+                    onValueChange={(val) => setCategory(val)}
+                    required
+                  >
                     <SelectTrigger id="category">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -175,64 +242,57 @@ const UploadProperty = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div>
                   <Label htmlFor="price">Price ($) *</Label>
                   <Input
                     id="price"
                     type="number"
                     placeholder="450000"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
                     required
                   />
                 </div>
-
                 <div>
                   <Label htmlFor="phone">Phone Number *</Label>
                   <Input
                     id="phone"
                     type="tel"
                     placeholder="+1 (555) 123-4567"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
                     required
                   />
                 </div>
-
                 <div>
                   <Label htmlFor="address">Address *</Label>
                   <Input
                     id="address"
                     placeholder="123 Main St, City, State"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
                     required
                   />
                 </div>
-
                 <div>
                   <Label htmlFor="bedrooms">Bedrooms</Label>
-                  <Input id="bedrooms" type="number" placeholder="4" />
+                  <Input
+                    id="bedrooms"
+                    type="number"
+                    placeholder="4"
+                    value={bedrooms}
+                    onChange={(e) => setBedrooms(e.target.value)}
+                  />
                 </div>
-
                 <div>
                   <Label htmlFor="bathrooms">Bathrooms</Label>
-                  <Input id="bathrooms" type="number" placeholder="3" />
-                </div>
-
-                <div>
-                  <Label htmlFor="area">Area (sqft)</Label>
-                  <Input id="area" type="number" placeholder="2500" />
-                </div>
-
-                <div>
-                  <Label htmlFor="type">Property Type</Label>
-                  <Select>
-                    <SelectTrigger id="type">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="house">House</SelectItem>
-                      <SelectItem value="apartment">Apartment</SelectItem>
-                      <SelectItem value="condo">Condo</SelectItem>
-                      <SelectItem value="commercial">Commercial</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    id="bathrooms"
+                    type="number"
+                    placeholder="3"
+                    value={bathrooms}
+                    onChange={(e) => setBathrooms(e.target.value)}
+                  />
                 </div>
               </div>
             </div>
@@ -240,7 +300,6 @@ const UploadProperty = () => {
             {/* Media Upload */}
             <div className="bg-card rounded-xl shadow-soft p-6 space-y-4">
               <h2 className="text-2xl font-bold">Media</h2>
-
               {/* Images */}
               <div>
                 <Label>Images *</Label>
@@ -260,7 +319,6 @@ const UploadProperty = () => {
                     </p>
                   </label>
                 </div>
-
                 {imagePreviews.length > 0 && (
                   <div className="grid grid-cols-3 gap-3 mt-4">
                     {imagePreviews.map((preview, index) => (
@@ -303,7 +361,6 @@ const UploadProperty = () => {
                     </p>
                   </label>
                 </div>
-
                 {videoPreview && (
                   <div className="mt-4 relative">
                     <video
@@ -338,11 +395,9 @@ const UploadProperty = () => {
                   Use My Location
                 </Button>
               </div>
-
               <p className="text-sm text-muted-foreground">
                 Click on the map or drag the marker to set the exact location
               </p>
-
               <div className="h-[400px] rounded-xl overflow-hidden border border-border">
                 <MapContainer
                   center={mapPosition}
@@ -350,16 +405,13 @@ const UploadProperty = () => {
                   style={{ height: "100%", width: "100%" }}
                   scrollWheelZoom={false}
                 >
-                  <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   <LocationMarker
                     position={mapPosition}
                     setPosition={setMapPosition}
                   />
                 </MapContainer>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Latitude</Label>
