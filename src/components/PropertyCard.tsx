@@ -104,7 +104,7 @@ const PropertyCard = ({
         <div className="flex items-center justify-between pt-2 border-t border-border">
           <div>
             <span className="text-2xl font-bold text-primary">
-              ${price.toLocaleString()}
+              ₦{price.toLocaleString()}
             </span>
             {type === "rent" && (
               <span className="text-muted-foreground text-sm">/month</span>

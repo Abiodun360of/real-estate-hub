@@ -5,16 +5,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { authAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
-const Login = () => {
+const Register = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+    name: "",
     email: "",
     password: "",
+    phone: "",
+    role: "user",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,20 +32,20 @@ const Login = () => {
     
     try {
       setLoading(true);
-      await authAPI.login(formData);
+      await authAPI.register(formData);
       
       toast({
         title: "Success!",
-        description: "You have successfully logged in.",
+        description: "Your account has been created successfully.",
       });
       
       // Redirect to home page
       navigate("/");
-      window.location.reload(); // Refresh to update navbar
+      window.location.reload();
     } catch (error: any) {
       toast({
-        title: "Login Failed",
-        description: error.message || "Invalid email or password",
+        title: "Registration Failed",
+        description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -56,12 +66,24 @@ const Login = () => {
         </div>
 
         <div className="bg-card rounded-xl shadow-medium p-8">
-          <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
+          <h1 className="text-3xl font-bold mb-2">Create an account</h1>
           <p className="text-muted-foreground mb-6">
-            Sign in to your account to continue
+            Join us to find your dream property
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -81,23 +103,44 @@ const Login = () => {
                 type="password"
                 placeholder="••••••••"
                 required
+                minLength={6}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Must be at least 6 characters
+              </p>
             </div>
 
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input type="checkbox" className="rounded border-border" />
-                <span className="text-muted-foreground">Remember me</span>
-              </label>
-              <Link to="#" className="text-primary hover:underline">
-                Forgot password?
-              </Link>
+            <div>
+              <Label htmlFor="phone">Phone Number (Optional)</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+234 123 456 7890"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="role">Account Type</Label>
+              <Select
+                value={formData.role}
+                onValueChange={(value) => setFormData({ ...formData, role: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User (Find Properties)</SelectItem>
+                  <SelectItem value="agent">Agent (List Properties)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? "Creating account..." : "Create Account"}
             </Button>
           </form>
 
@@ -106,9 +149,9 @@ const Login = () => {
           </div>
 
           <div className="text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <Link to="/register" className="text-primary hover:underline font-medium">
-              Sign up
+            Already have an account?{" "}
+            <Link to="/login" className="text-primary hover:underline font-medium">
+              Sign in
             </Link>
           </div>
         </div>
@@ -123,4 +166,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;
