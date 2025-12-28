@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://zillow-backend-1hmg.onrender.com/api';
 
 const getAuthToken = () => localStorage.getItem('token');
 
